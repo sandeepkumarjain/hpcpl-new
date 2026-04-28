@@ -1,0 +1,132 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user with roles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["super_admin", "admin", "staff", "customer"] },
+        "companyId": { "type": "string" },
+        "name": { "type": "string" },
+        "mobile": { "type": "string" },
+        "permissions": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["role", "name", "mobile"]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "Registered company (Admin Companies)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyName": { "type": "string" },
+        "address": { "type": "string" },
+        "owner": { "type": "string" },
+        "gst": { "type": "string" },
+        "mobile": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["companyName", "gst"]
+    },
+    "PurchaseOrder": {
+      "title": "Purchase Order",
+      "description": "PO records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "poNo": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "supplier": { "type": "string" },
+        "supplierGst": { "type": "string" },
+        "product": { "type": "string" },
+        "hsn": { "type": "string" },
+        "qty": { "type": "number" },
+        "rate": { "type": "number" },
+        "tax": { "type": "number" },
+        "total": { "type": "number" }
+      },
+      "required": ["poNo", "supplier", "total"]
+    },
+    "SalesOrder": {
+      "title": "Sales Order",
+      "description": "SO records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "soNo": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "customer": { "type": "string" },
+        "customerGst": { "type": "string" },
+        "product": { "type": "string" },
+        "qty": { "type": "number" },
+        "rate": { "type": "number" },
+        "tax": { "type": "number" },
+        "taxableAmount": { "type": "number" },
+        "gstAmount": { "type": "number" },
+        "total": { "type": "number" }
+      },
+      "required": ["soNo", "customer", "total"]
+    },
+    "LoadingSheet": {
+      "title": "Loading Sheet",
+      "description": "Daily loading records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "truckNo": { "type": "string" },
+        "driverNo": { "type": "string" },
+        "status": { "type": "string", "enum": ["On Way", "Gate In", "Under Loading", "Loading Completed", "Waiting Payment", "Driver Not Responding", "Driver Not Coming"] },
+        "purchaseFromId": { "type": "string" },
+        "purchaseRate": { "type": "number" },
+        "soldToId": { "type": "string" },
+        "soldRate": { "type": "number" },
+        "grossWt": { "type": "number" },
+        "drums": { "type": "number" },
+        "drumWeight": { "type": "number", "description": "Weight of single empty drum" },
+        "netWt": { "type": "number" },
+        "weightSlipUrl": { "type": "string" }
+      },
+      "required": ["truckNo", "status"]
+    },
+    "Invoice": {
+      "title": "Proforma Invoice",
+      "description": "Generated from loading sheet",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "piNo": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "buyerId": { "type": "string" },
+        "loadingSheetId": { "type": "string" },
+        "taxable": { "type": "number" },
+        "gst": { "type": "number" },
+        "roundOff": { "type": "number" },
+        "grandTotal": { "type": "number" }
+      },
+      "required": ["piNo", "grandTotal"]
+    },
+    "Rate": {
+      "title": "Live Rate",
+      "description": "Daily bitumen rates",
+      "type": "object",
+      "properties": {
+        "product": { "type": "string" },
+        "port": { "type": "string" },
+        "rate": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["product", "port", "rate"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "System users" },
+    "/companies/{companyId}": { "schema": "Company", "description": "Admin/Customer companies" },
+    "/purchase_orders/{poId}": { "schema": "PurchaseOrder", "description": "Purchase orders" },
+    "/sales_orders/{soId}": { "schema": "SalesOrder", "description": "Sales orders" },
+    "/loading_sheets/{lsId}": { "schema": "LoadingSheet", "description": "Loading sheet records" },
+    "/invoices/{invoiceId}": { "schema": "Invoice", "description": "Proforma invoices" },
+    "/rates/{rateId}": { "schema": "Rate", "description": "Live bitumen rates" }
+  }
+}

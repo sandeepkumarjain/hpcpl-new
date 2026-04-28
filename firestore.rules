@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'; }
+    function isStaff() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'staff', 'admin']; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Helpers
+    function isValidUser(data) {
+      return data.keys().hasAll(['role', 'name', 'mobile']) &&
+             data.role is string && data.role in ['super_admin', 'admin', 'staff', 'customer'] &&
+             data.name is string && data.name.size() <= 100 &&
+             data.mobile is string && data.mobile.size() <= 15;
+    }
+
+    // 1. Users
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isStaff());
+      allow create: if isSignedIn() && isValidUser(incoming()) && (isOwner(userId) || isAdmin());
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin()) && isValidUser(incoming()) &&
+        (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'mobile', 'role', 'permissions']) || isAdmin());
+      allow list: if true; // Allow public search by mobile during login
+    }
+
+    // 2. Companies
+    match /companies/{companyId} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    // 3. Purchase Orders
+    match /purchase_orders/{poId} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    // 4. Sales Orders
+    match /sales_orders/{soId} {
+      allow read: if isStaff() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == existing().customer);
+      allow write: if isStaff();
+    }
+
+    // 5. Loading Sheets
+    match /loading_sheets/{lsId} {
+      allow read: if isStaff() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == existing().soldToId);
+      allow write: if isStaff();
+    }
+
+    // 6. Invoices
+    match /invoices/{invoiceId} {
+      allow read: if isStaff() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == existing().buyerId);
+      allow write: if isStaff();
+    }
+
+    // 7. Rates
+    match /rates/{rateId} {
+      allow read: if true; // Publicly readable
+      allow write: if isStaff();
+    }
+
+    // 8. Live Rates (for public landing page)
+    match /live_rates/{rateId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+  }
+}
